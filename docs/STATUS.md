@@ -21,10 +21,15 @@
 - `.gitignore` cobre banco local, PDFs/arquivos de saída, ambientes virtuais,
   perfis do Chrome, logs, credenciais em `.env` e backups. As capturas aprovadas
   em `docs/images/` não são ignoradas.
-- A pasta local não continha metadados `.git`, commits ou remotos. O GitHub
-  autenticado respondeu com a conta `fezleep`, mas o conector disponível não
-  oferece criação de repositório. Publicação permanece pendente até existir um
-  repositório privado `fezleep/decip-certificados` e um meio de push autorizado.
+- Antes da preparação desta publicação, a pasta local não continha metadados
+  `.git`, commits ou remotos. Foi criado o repositório Git local na branch `main`
+  com o commit inicial `a13eb3492616fb84af8310a68dce41acd9e4d6cb`.
+- A conta autenticada informada pelo GitHub é `fezleep`; a listagem acessível e a
+  busca por `decip-certificados` não retornaram um repositório correspondente.
+  O `gh` não está instalado e a integração GitHub disponível não oferece a ação
+  de criar repositório. Portanto, nenhum remoto foi criado e o push não ocorreu.
+  A publicação fica pendente até existir o destino privado
+  `fezleep/decip-certificados` ou estar disponível a operação de criação.
 
 ## Correção do erro `findIndex` ao cadastrar
 
