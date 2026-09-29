@@ -1,0 +1,47 @@
+const targets = await (await fetch('http://127.0.0.1:9231/json/list')).json();
+const target = targets.find(t => t.type === 'page');
+if (!target) throw new Error('Página do Chrome não encontrada.');
+const ws = new WebSocket(target.webSocketDebuggerUrl);
+await new Promise((resolve, reject) => { ws.onopen=resolve; ws.onerror=reject; });
+let seq=0, pending=new Map(), exceptions=[];
+ws.onmessage=event=>{const msg=JSON.parse(event.data);if(msg.id&&pending.has(msg.id)){pending.get(msg.id)(msg);pending.delete(msg.id)}if(msg.method==='Runtime.exceptionThrown')exceptions.push(msg.params.exceptionDetails.text)};
+function command(method,params={}){const id=++seq;ws.send(JSON.stringify({id,method,params}));return new Promise(resolve=>pending.set(id,resolve))}
+async function evaluate(expression,awaitPromise=false){const out=await command('Runtime.evaluate',{expression,awaitPromise,returnByValue:true});if(out.result?.exceptionDetails)throw new Error(out.result.exceptionDetails.text);return out.result?.result?.value}
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+async function until(expression,message){for(let i=0;i<80;i++){if(await evaluate(expression))return;await wait(100)}throw new Error(message)}
+await command('Runtime.enable'); await command('Page.enable');
+await command('Page.navigate',{url:'http://127.0.0.1:8766/'}); await until("document.readyState==='complete' && document.querySelector('#participant-form')",'Interface não carregou');
+await wait(500);
+const checks=[]; const check=(name,value)=>{if(!value)throw new Error(name);checks.push(name)};
+await evaluate("[...document.querySelectorAll('[data-select]:checked')].forEach(x=>x.click())");
+await until("[...document.querySelectorAll('[data-select]')].every(x=>!x.checked)",'Não foi possível preparar seleção vazia');
+await wait(300);
+await evaluate("document.querySelector('[data-next=\"2\"]').click()");
+check('seleção vazia permanece na etapa 1',await evaluate("document.querySelector('[data-panel=\"1\"]').classList.contains('active')"));
+check('seleção vazia mostra motivo',await evaluate("document.querySelector('#step1-error').textContent.includes('Selecione')"));
+const personName=`Pessoa Fictícia Sem Email ${Date.now()}`;
+await evaluate(`(()=>{const f=document.querySelector('#participant-form');f.elements.name.value=${JSON.stringify(personName)};f.elements.email.value='';f.requestSubmit()})()`);
+await until(`document.querySelector('#participants').textContent.includes(${JSON.stringify(personName)})`,'Cadastro sem e-mail não apareceu');
+check('confirmação de cadastro orienta continuar',await evaluate("document.querySelector('#toast').textContent.includes('Adicione outra pessoa ou continue')"));
+check('cadastro não avança automaticamente',await evaluate("document.querySelector('[data-panel=\"1\"]').classList.contains('active')"));
+await evaluate("document.querySelector('[data-next=\"2\"]').click()"); await until("document.querySelector('[data-panel=\"2\"]').classList.contains('active')",'Continuar não abriu etapa 2');
+await evaluate("document.querySelector('#activity-form').elements.title.value='Atividade Fictícia Preservada'");
+await evaluate("document.querySelector('[data-back=\"1\"]').click()");
+await evaluate("document.querySelector('#steps [data-step=\"2\"]').click()");
+check('dados preservados ao voltar',await evaluate("document.querySelector('#activity-form').elements.title.value==='Atividade Fictícia Preservada'"));
+await evaluate("document.querySelector('#activity-form').elements.role.value='';document.querySelector('#save-activity').click()");
+await until("document.querySelector('.field-error')",'Validação não apareceu junto ao campo');
+check('obrigatório incompleto mantém etapa 2',await evaluate("document.querySelector('[data-panel=\"2\"]').classList.contains('active')"));
+await evaluate("document.querySelector('#activity-form').elements.role.value='Apoio institucional';document.querySelector('#save-activity').click()");
+await until("document.querySelector('[data-panel=\"3\"]').classList.contains('active')",'Etapa 3 não abriu');
+await evaluate("document.querySelector('#make-preview').click()"); await until("document.querySelector('#pdf-frame').src.startsWith('blob:')",'Prévia real não carregou');
+await evaluate("document.querySelector('#generate').click()"); await until("document.querySelector('[data-panel=\"4\"]').classList.contains('active')",'Resultado não abriu');
+check('resultado oferece download',await evaluate("!!document.querySelector('#downloads a[href*=download]')"));
+check('SMTP oculto inicialmente',await evaluate("document.querySelector('#email-panel').classList.contains('hidden')"));
+const downloadOk=await evaluate(`fetch(document.querySelector('#downloads a').href).then(r=>r.ok&&r.headers.get('content-type').includes('application/pdf'))`,true);
+check('download retorna PDF',downloadOk);
+await evaluate("document.querySelector('#show-email').click()");
+check('sem e-mail sinalizado no envio',await evaluate("document.querySelector('#recipient-warning').textContent.includes('não serão enviados')"));
+check('envio bloqueado sem destinatário válido',await evaluate("document.querySelector('#send').disabled"));
+check('sem exceções JavaScript',exceptions.length===0);
+console.log(JSON.stringify({ok:true,checks,exceptions},null,2)); ws.close();

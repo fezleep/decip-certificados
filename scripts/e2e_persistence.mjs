@@ -1,0 +1,56 @@
+const base = process.env.DECIP_E2E_URL || 'http://127.0.0.1:8767';
+const cdp = process.env.DECIP_CDP_URL || 'http://127.0.0.1:9232';
+const targets = await (await fetch(`${cdp}/json/list`)).json();
+const target = targets.find(t => t.type === 'page');
+if (!target) throw new Error('Página do Chrome não encontrada.');
+const ws = new WebSocket(target.webSocketDebuggerUrl);
+await new Promise((resolve, reject) => { ws.onopen=resolve; ws.onerror=reject; });
+let seq=0; const pending=new Map(); const exceptions=[]; let acceptDialogs=false;
+ws.onmessage=event=>{const m=JSON.parse(event.data);if(m.id&&pending.has(m.id)){pending.get(m.id)(m);pending.delete(m.id)}if(m.method==='Runtime.exceptionThrown')exceptions.push(m.params.exceptionDetails.text);if(m.method==='Page.javascriptDialogOpening'&&acceptDialogs)command('Page.handleJavaScriptDialog',{accept:true})};
+function command(method,params={}){const id=++seq;ws.send(JSON.stringify({id,method,params}));return new Promise(resolve=>pending.set(id,resolve))}
+async function evaluate(expression,awaitPromise=false){const out=await command('Runtime.evaluate',{expression,awaitPromise,returnByValue:true});if(out.result?.exceptionDetails)throw new Error(out.result.exceptionDetails.text);return out.result?.result?.value}
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+async function until(expression,message){for(let i=0;i<100;i++){if(await evaluate(expression))return;await wait(100)}const diagnostic=await evaluate("({text:document.body.innerText.slice(0,1200),toast:document.querySelector('#toast')?.textContent,participants:typeof state==='undefined'?'sem state':state.participants,batch:typeof state==='undefined'?null:state.batch})");throw new Error(`${message}: ${JSON.stringify(diagnostic)}; exceções=${JSON.stringify(exceptions)}`)}
+const checks=[]; function check(name,value){if(!value)throw new Error(name);checks.push(name)}
+await command('Runtime.enable'); await command('Page.enable');
+await command('Page.navigate',{url:base}); await wait(500); await until("document.readyState==='complete' && document.querySelector('#participant-form') && typeof state!=='undefined' && state.batch",'Interface não carregou');
+const name=`Pessoa Persistência ${Date.now()}`;
+const activityTitle=`Atividade Persistência ${Date.now()}`;
+const initialBatch=await evaluate("state.batch.id");
+await evaluate(`(()=>{const f=document.querySelector('#participant-form'),b=f.querySelector('button[type="submit"]');f.elements.name.value=${JSON.stringify(name)};f.elements.email.value='persistencia@example.org';b.click();b.click()})()`);
+await until(`document.querySelector('#participants').textContent.includes(${JSON.stringify(name)})`,'Participante não apareceu no lote');
+check('ação confirmou somente após resposta',await evaluate("document.querySelector('#toast').textContent.includes('confirmados no servidor')"));
+check('cadastro aparece uma vez no lote',await evaluate(`state.participants.filter(p=>p.name===${JSON.stringify(name)}).length===1`));
+check('cadastro aparece uma vez nos salvos',await evaluate(`state.registrations.filter(p=>p.name===${JSON.stringify(name)}).length===1`));
+await command('Page.reload',{ignoreCache:true}); await wait(500); await until(`document.readyState==='complete' && typeof state!=='undefined' && state.batch && document.querySelector('#participants').textContent.includes(${JSON.stringify(name)})`,'Participante sumiu após F5');
+check('F5 manteve o lote ativo',await evaluate(`state.batch.id===${initialBatch}`));
+check('F5 manteve uma única ocorrência',await evaluate(`state.participants.filter(p=>p.name===${JSON.stringify(name)}).length===1&&state.registrations.filter(p=>p.name===${JSON.stringify(name)}).length===1`));
+await evaluate(`(()=>{const row=[...document.querySelectorAll('#participants tr')].find(r=>r.textContent.includes(${JSON.stringify(name)}));row.querySelector('.selection').click()})()`);
+await until(`state.participants.find(p=>p.name===${JSON.stringify(name)}).selected===0`,'Seleção não foi salva');
+await command('Page.reload',{ignoreCache:true}); await wait(500); await until("document.readyState==='complete' && typeof state!=='undefined' && state.batch",'Interface não voltou após testar seleção');
+check('seleção para geração persistiu após F5',await evaluate(`!state.participants.find(p=>p.name===${JSON.stringify(name)}).selected`));
+await evaluate(`(()=>{const row=[...document.querySelectorAll('#participants tr')].find(r=>r.textContent.includes(${JSON.stringify(name)}));row.querySelector('.selection').click()})()`);
+await until(`state.participants.find(p=>p.name===${JSON.stringify(name)}).selected===1`,'Não foi possível restaurar a seleção');
+await evaluate("document.querySelector('[data-next=\"2\"]').click()"); await until("document.querySelector('[data-panel=\"2\"]').classList.contains('active')",'Etapa de atividade não abriu');
+await evaluate(`(()=>{const f=document.querySelector('#activity-form');f.elements.title.value=${JSON.stringify(activityTitle)};f.elements.role.value='Apoio fictício';f.elements.start_date.value='2026-09-01';f.elements.end_date.value='2026-09-02';f.elements.hours.value='2';f.elements.activities.value='Atividade fictícia de teste';f.elements.issue_city.value='São Paulo';f.elements.issue_date.value='2026-09-03';f.elements.signer1_name.value='Responsável Um';f.elements.signer1_role.value='Cargo Um';f.elements.signer2_name.value='Responsável Dois';f.elements.signer2_role.value='Cargo Dois';document.querySelector('#save-activity').click()})()`);
+await until("document.querySelector('[data-panel=\"3\"]').classList.contains('active')",'Atividade não foi salva');
+await command('Page.reload',{ignoreCache:true}); await wait(500); await until("document.readyState==='complete' && typeof state!=='undefined' && state.batch && document.querySelector('#activity-form').elements.title.value.length>0",'Atividade não voltou após F5');
+check('atividade persistiu após F5',await evaluate(`document.querySelector('#activity-form').elements.title.value===${JSON.stringify(activityTitle)}`));
+check('lote permaneceu o mesmo após atividade',await evaluate(`state.batch.id===${initialBatch}`));
+await evaluate(`(()=>{const row=[...document.querySelectorAll('#participants tr')].find(r=>r.textContent.includes(${JSON.stringify(name)}));row.querySelector('.remove').click()})()`); await until(`!document.querySelector('#participants').textContent.includes(${JSON.stringify(name)})`,'Remoção não apareceu');
+await command('Page.reload',{ignoreCache:true}); await wait(500); await until("document.readyState==='complete' && typeof state!=='undefined' && state.batch && document.querySelector('#registrations')",'Interface não recarregou');
+check('remoção permaneceu após F5',await evaluate(`!document.querySelector('#participants').textContent.includes(${JSON.stringify(name)})`));
+check('cadastro salvo foi preservado',await evaluate(`document.querySelector('#registrations').textContent.includes(${JSON.stringify(name)})`));
+await evaluate(`(()=>{const row=[...document.querySelectorAll('#registrations tr')].find(r=>r.textContent.includes(${JSON.stringify(name)}));row.querySelector('.add').click()})()`); await until(`document.querySelector('#participants').textContent.includes(${JSON.stringify(name)})`,'Cadastro não voltou ao lote');
+await evaluate("document.querySelector('[data-next=\"2\"]').click()"); await until("document.querySelector('[data-panel=\"2\"]').classList.contains('active')",'Atividade não abriu novamente');
+await evaluate("document.querySelector('#save-activity').click()"); await until("document.querySelector('[data-panel=\"3\"]').classList.contains('active')",'Atividade persistida não pôde ser confirmada');
+await evaluate("document.querySelector('#generate').click()"); await until("document.querySelector('[data-panel=\"4\"]').classList.contains('active') && state.history.length>0",'Certificado fictício não foi gerado');
+const historyCount=await evaluate('state.history.length'); acceptDialogs=true;
+await evaluate("document.querySelector('#new-batch').click()"); await until(`state.batch.id!==${initialBatch}`,'Novo lote não foi criado'); acceptDialogs=false;
+check('novo lote começou vazio',await evaluate('state.participants.length===0'));
+check('novo lote preservou cadastro',await evaluate(`state.registrations.some(p=>p.name===${JSON.stringify(name)})`));
+check('novo lote preservou histórico',await evaluate(`state.history.length===${historyCount}`));
+check('sem exceções JavaScript',exceptions.length===0);
+await evaluate(`sessionStorage.setItem('e2eExpectedName',${JSON.stringify(name)});sessionStorage.setItem('e2eExpectedBatch',String(state.batch.id));sessionStorage.setItem('e2eExpectedHistory',String(state.history.length))`);
+console.log(JSON.stringify({ok:true,name,activityTitle,initialBatch,checks,exceptions},null,2));
+ws.close();

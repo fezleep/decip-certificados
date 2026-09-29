@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+data/**
+output/**
+.chrome*/
+.env
+.env.*
+*.log
+*.sqlite
+*.sqlite3
+*.db
+*.bak
+*.backup
+!data/.gitkeep
+!output/.gitkeep

@@ -1,0 +1,50 @@
+<!doctype html><html lang="pt-BR"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Certificados DECIP</title><link rel="stylesheet" href="/static/app.css">
+</head><body>
+<header><div class="brand"><span class="brand-mark" aria-hidden="true">D</span><div><strong>Instituto DECIP</strong><small>Certificados de voluntariado</small></div></div><span class="local-badge">Aplicativo local</span></header>
+<div class="shell">
+<nav aria-label="Etapas do processo"><ol id="steps">
+<li><button data-step="1" aria-current="step"><b>1</b><span>Participantes</span></button></li>
+<li><button data-step="2"><b>2</b><span>Atividade e certificado</span></button></li>
+<li><button data-step="3"><b>3</b><span>Revisar e gerar PDF</span></button></li>
+<li><button data-step="4"><b>4</b><span>Resultado</span></button></li>
+</ol></nav>
+<main>
+<div id="toast" role="status" aria-live="polite"></div>
+<section class="panel active" data-panel="1"><div class="eyebrow">ETAPA 1 DE 4</div><div class="section-head"><div><h1>Participantes do lote atual</h1><p class="lead">Esta lista é somente da atividade em preparação. Os cadastros salvos ficam preservados.</p></div><button class="secondary" id="new-batch">Novo lote</button></div>
+<div class="cards two"><article><h2>Importar XLSX</h2><p>O sistema sugere as colunas; você confirma o mapeamento antes de importar.</p><label class="file"><span>Escolher planilha</span><input id="xlsx" type="file" accept=".xlsx"></label><div id="mapping" class="mapping hidden"></div></article>
+<article><h2>Novo cadastro</h2><form id="participant-form" novalidate><input type="hidden" name="id"><label>Nome completo<input name="name" autocomplete="name" placeholder="Ex.: Marina Oliveira Santos" required></label><span class="error" data-error="name"></span><label>E-mail <span class="optional">(opcional — usado apenas se você escolher enviar)</span><input name="email" type="email" autocomplete="email" placeholder="nome@exemplo.org"></label><span class="field-help" id="email-help">Sem e-mail, o PDF será gerado normalmente.</span><span class="error" data-error="email"></span><label class="check"><input name="eligible" type="checkbox" checked> Elegível/presente para receber</label><button type="submit">Salvar e adicionar ao lote</button></form></article></div>
+<div class="section-head"><div><h2>Lista do lote atual</h2><p id="participant-count">Nenhum participante</p></div></div><div class="table-wrap"><table><thead><tr><th>Gerar</th><th>Nome</th><th>E-mail</th><th>Situação</th><th></th></tr></thead><tbody id="participants"></tbody></table></div>
+<div class="section-head"><div><h2>Cadastros salvos</h2><p>Adicione novamente sem redigitar. Excluir cadastro arquiva o nome; certificados, PDFs e histórico permanecem.</p></div></div><div class="table-wrap"><table><thead><tr><th>Nome</th><th>E-mail</th><th></th></tr></thead><tbody id="registrations"></tbody></table></div>
+<div id="step1-error" class="navigation-error" role="alert"></div><div class="actions sticky-actions"><span></span><button data-next="2">Continuar para atividade</button></div></section>
+
+<section class="panel" data-panel="2"><div class="eyebrow">ETAPA 2 DE 4</div><h1>Dados da atividade e do certificado</h1><p class="lead">Os dados abaixo valem para o lote. Ajustes individuais importados têm prioridade.</p>
+<form id="activity-form" novalidate><div class="form-grid">
+<label class="wide">Nome da atividade<input name="title" placeholder="Ex.: Programa de Voluntariado Instituto DECIP"></label>
+<label>Função exercida<input name="role" placeholder="Ex.: Voluntária de apoio institucional"></label><label>Total de horas<input name="hours" inputmode="decimal" placeholder="Ex.: 24"></label>
+<label>Data inicial<input name="start_date" type="date"></label><label>Data final<input name="end_date" type="date"></label>
+<label class="wide">Atividades desenvolvidas<textarea name="activities" maxlength="300" rows="4" placeholder="Descreva as atividades realizadas."></textarea><span class="counter"><b id="activity-count">0</b>/300</span></label>
+<label>Cidade de emissão<input name="issue_city" placeholder="Ex.: São Paulo"></label><label>Data de emissão<input name="issue_date" type="date"></label>
+</div><h2>Responsáveis</h2><div class="form-grid">
+<label>Primeiro responsável<input name="signer1_name"></label><label>Cargo<input name="signer1_role"></label><label>Assinatura 1 (caminho opcional)<input name="signer1_signature" placeholder="C:\...\assinatura.png"></label><span></span>
+<label>Segundo responsável<input name="signer2_name"></label><label>Cargo<input name="signer2_role"></label><label>Assinatura 2 (caminho opcional)<input name="signer2_signature" placeholder="C:\...\assinatura.png"></label>
+</div><div id="activity-errors" class="summary-error"></div></form>
+<div class="actions sticky-actions"><button class="secondary" data-back="1">Voltar</button><button id="save-activity">Continuar para revisão</button></div></section>
+
+<section class="panel" data-panel="3"><div class="eyebrow">ETAPA 3 DE 4</div><h1>Revise e gere os PDFs</h1><p class="lead">A prévia abaixo é o próprio PDF que será salvo — não é uma simulação em HTML.</p>
+<div class="review-grid"><article class="review" id="review"></article><article class="preview-card"><div><h2>Prévia real</h2><p>Escolha um participante e gere uma página PDF.</p><select id="preview-person"></select><button id="make-preview">Gerar prévia em PDF</button></div><iframe id="pdf-frame" title="Prévia do certificado em PDF"></iframe></article></div>
+<div class="note"><strong>Validação:</strong> o código é único e fica salvo no histórico. Ainda não existe consulta pública de autenticidade.</div>
+<div id="generation-result" aria-live="polite"></div><div class="actions sticky-actions"><button class="secondary" data-back="2">Voltar</button><button id="generate">Gerar PDFs e ver resultado</button></div></section>
+
+<section class="panel" data-panel="4"><div class="eyebrow">ETAPA 4 DE 4</div><h1>Certificados gerados</h1><p class="lead">Baixe os PDFs abaixo. Nada foi enviado por e-mail.</p>
+<div id="downloads" class="downloads"></div>
+<div class="email-choice"><button class="secondary" id="show-email">Enviar por e-mail</button><p>Opcional. Configure e confirme somente se quiser distribuir agora.</p></div>
+<section id="email-panel" class="email-panel hidden"><h2>Envio por e-mail</h2><div id="recipient-warning" class="note"></div><button class="quiet" id="open-config">Configurar SMTP</button><label>E-mail para teste<input id="test-email" type="email" placeholder="operador@exemplo.org"></label><button class="secondary" id="send-test">Enviar teste com o primeiro PDF</button><label>Confirmação do lote<input id="send-confirm" placeholder="Digite ENVIAR"></label><button class="danger" id="send" disabled>Enviar apenas para destinatários válidos</button><div id="send-result" aria-live="polite"></div></section>
+<h2>Histórico de certificados</h2><p class="lead">Cada situação abaixo pertence ao certificado e à atividade indicados.</p><div class="table-wrap"><table><thead><tr><th>Código</th><th>Participante</th><th>Atividade</th><th>PDF gerado</th><th>E-mail enviado</th></tr></thead><tbody id="history"></tbody></table></div>
+<div class="actions sticky-actions"><button class="secondary" data-back="3">Voltar para revisão</button><span></span></div></section>
+</main></div>
+
+<dialog id="config-dialog"><form method="dialog" id="smtp-form"><button class="close" value="cancel" aria-label="Fechar">×</button><h1>Configurações de e-mail</h1><p>A senha é armazenada pelo cofre do Windows e nunca entra no banco ou nos logs.</p><div class="form-grid">
+<label>Servidor SMTP<input name="host" placeholder="smtp.exemplo.org"></label><label>Porta<input name="port" type="number" value="587"></label><label>Usuário / remetente<input name="username" type="email"></label><label>Nome exibido<input name="sender_name" value="Instituto DECIP"></label><label>Responder para<input name="reply_to" type="email"></label><label>Senha de app<input name="password" type="password" autocomplete="new-password"></label><label class="wide">Assunto<input name="subject" value="Seu certificado de voluntariado — Instituto DECIP"></label><label class="wide">Mensagem<textarea name="body" rows="5">Olá, {nome}.&#10;&#10;Segue seu certificado de voluntariado.&#10;&#10;Instituto DECIP</textarea></label></div><div class="actions"><button class="secondary" value="cancel">Cancelar</button><button type="button" id="save-smtp">Salvar configurações</button></div></form></dialog>
+<script src="/static/app.js"></script></body></html>
