@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 from urllib.error import HTTPError
 
-from app.launcher import InstanceState, inspect_instance, listener_details
+from app.launcher import InstanceState, inspect_instance, listener_details, main as launcher_main
 from app.web import create_app
 import run
 
@@ -32,7 +32,7 @@ class LauncherTests(unittest.TestCase):
         sandbox = Path(temporary.name)
         launcher = (ROOT / "iniciar.bat").read_text(encoding="utf-8")
         launcher = launcher.replace(
-            'start "DECIP Certificados" http://127.0.0.1:8765',
+            'start "DECIP Certificados" http://127.0.0.1:8766',
             'echo opened>browser-opened.txt',
         )
         (sandbox / "iniciar.bat").write_text(launcher, encoding="utf-8")
@@ -78,14 +78,14 @@ class LauncherTests(unittest.TestCase):
 
     def test_inspect_instance_reports_free_port(self):
         with patch("app.launcher.socket.create_connection", side_effect=ConnectionRefusedError):
-            result = inspect_instance("127.0.0.1", 8765)
+            result = inspect_instance("127.0.0.1", 8766)
 
         self.assertIs(InstanceState.FREE, result.state)
 
     def test_inspect_instance_does_not_treat_socket_access_denied_as_free(self):
         denied = PermissionError(10013, "acesso ao socket negado")
         with patch("app.launcher.socket.create_connection", side_effect=denied):
-            result = inspect_instance("127.0.0.1", 8765)
+            result = inspect_instance("127.0.0.1", 8766)
 
         self.assertIs(InstanceState.OTHER, result.state)
         self.assertIn("PermissionError", result.detail)
@@ -93,21 +93,21 @@ class LauncherTests(unittest.TestCase):
     def test_inspect_instance_recognizes_existing_decip(self):
         with patch("app.launcher.socket.create_connection", return_value=_Connection()), \
              patch("app.launcher.urlopen", return_value=_Response(b'{"service":"decip-certificados","status":"ok"}')):
-            result = inspect_instance("127.0.0.1", 8765)
+            result = inspect_instance("127.0.0.1", 8766)
 
         self.assertIs(InstanceState.DECIP, result.state)
 
     def test_inspect_instance_rejects_another_http_service(self):
         with patch("app.launcher.socket.create_connection", return_value=_Connection()), \
              patch("app.launcher.urlopen", return_value=_Response(b'{"service":"outro-programa","status":"ok"}')):
-            result = inspect_instance("127.0.0.1", 8765)
+            result = inspect_instance("127.0.0.1", 8766)
 
         self.assertIs(InstanceState.OTHER, result.state)
 
     def test_inspect_instance_rejects_json_that_is_not_an_object(self):
         with patch("app.launcher.socket.create_connection", return_value=_Connection()), \
              patch("app.launcher.urlopen", return_value=_Response(b"[]")):
-            result = inspect_instance("127.0.0.1", 8765)
+            result = inspect_instance("127.0.0.1", 8766)
 
         self.assertIs(InstanceState.OTHER, result.state)
         self.assertIn("não pertence", result.detail)
@@ -117,25 +117,25 @@ class LauncherTests(unittest.TestCase):
         with patch("app.launcher.socket.create_connection", return_value=_Connection()), \
              patch("app.launcher.urlopen", side_effect=responses), \
              patch("app.launcher.time.sleep"):
-            result = inspect_instance("127.0.0.1", 8765)
+            result = inspect_instance("127.0.0.1", 8766)
 
         self.assertIs(InstanceState.DECIP, result.state)
 
     def test_inspect_instance_recognizes_decip_version_without_health_endpoint(self):
-        missing_health = HTTPError("http://127.0.0.1:8765/api/health", 404, "Not Found", {}, None)
+        missing_health = HTTPError("http://127.0.0.1:8766/api/health", 404, "Not Found", {}, None)
         legacy_page = _Response(b"<html><head><title>Certificados DECIP</title></head></html>")
         with patch("app.launcher.socket.create_connection", return_value=_Connection()), \
              patch("app.launcher.urlopen", side_effect=[missing_health, legacy_page]):
-            result = inspect_instance("127.0.0.1", 8765)
+            result = inspect_instance("127.0.0.1", 8766)
 
         self.assertIs(InstanceState.DECIP, result.state)
 
     @unittest.skipUnless(os.name == "nt", "diagnóstico de processo específico do Windows")
     def test_listener_details_reports_pid_for_controlled_service(self):
-        netstat = subprocess.CompletedProcess([], 0, "  TCP    127.0.0.1:8765    0.0.0.0:0    LISTENING    4321\n", "")
+        netstat = subprocess.CompletedProcess([], 0, "  TCP    127.0.0.1:8766    0.0.0.0:0    LISTENING    4321\n", "")
         process = subprocess.CompletedProcess([], 0, '{"ProcessId":4321,"Name":"python.exe","ExecutablePath":"C:\\\\Python312\\\\python.exe","CommandLine":"python run.py"}', "")
         with patch("app.launcher.subprocess.run", side_effect=[netstat, process]):
-            details = listener_details(8765)
+            details = listener_details(8766)
 
         self.assertEqual(4321, details.pid)
         self.assertEqual("python.exe", details.name)
@@ -145,13 +145,13 @@ class LauncherTests(unittest.TestCase):
     @unittest.skipUnless(os.name == "nt", "diagnóstico de processo específico do Windows")
     def test_listener_details_prefers_loopback_listener_for_same_port(self):
         netstat_output = (
-            "  TCP    10.0.0.5:8765      0.0.0.0:0    LISTENING    1111\n"
-            "  TCP    127.0.0.1:8765     0.0.0.0:0    LISTENING    2222\n"
+            "  TCP    10.0.0.5:8766      0.0.0.0:0    LISTENING    1111\n"
+            "  TCP    127.0.0.1:8766     0.0.0.0:0    LISTENING    2222\n"
         )
         netstat = subprocess.CompletedProcess([], 0, netstat_output, "")
         process = subprocess.CompletedProcess([], 0, '{"ProcessId":2222,"Name":"python.exe","ExecutablePath":"C:\\\\Python312\\\\python.exe","CommandLine":"python run.py"}', "")
         with patch("app.launcher.subprocess.run", side_effect=[netstat, process]):
-            details = listener_details(8765, host="127.0.0.1")
+            details = listener_details(8766, host="127.0.0.1")
 
         self.assertEqual(2222, details.pid)
 
@@ -159,7 +159,7 @@ class LauncherTests(unittest.TestCase):
     def test_listener_details_remains_useful_when_metadata_is_unavailable(self):
         netstat = subprocess.CompletedProcess([], 1, "", "acesso negado")
         with patch("app.launcher.subprocess.run", return_value=netstat):
-            details = listener_details(8765)
+            details = listener_details(8766)
 
         self.assertIsNone(details.pid)
         self.assertEqual("não identificado", details.name)
@@ -184,9 +184,18 @@ class LauncherTests(unittest.TestCase):
 
         self.assertEqual(0, result)
         self.assertEqual(
-            [("bind", "127.0.0.1", 8765, True), ("browser", "http://127.0.0.1:8765"), "serve", "close"],
+            [("bind", "127.0.0.1", 8766, True), ("browser", "http://127.0.0.1:8766"), "serve", "close"],
             events,
         )
+
+    def test_launcher_checks_port_8766_by_default(self):
+        with patch("app.launcher.inspect_instance") as inspect:
+            inspect.return_value.state = InstanceState.FREE
+
+            result = launcher_main([])
+
+        self.assertEqual(0, result)
+        inspect.assert_called_once_with("127.0.0.1", 8766)
 
     def test_browser_failure_does_not_stop_server(self):
         events = []

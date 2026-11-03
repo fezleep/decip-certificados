@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Fazer `iniciar.bat` reutilizar uma instância DECIP saudável e diagnosticar com segurança qualquer outro ocupante da porta 8765.
+**Goal:** Fazer `iniciar.bat` reutilizar uma instância DECIP saudável e diagnosticar com segurança qualquer outro ocupante da porta 8766.
 
 **Architecture:** Um módulo Python isolará sondagem HTTP, inspeção da porta e formatação do diagnóstico; o BAT apenas interpreta códigos de saída e mantém o servidor em primeiro plano. Uma rota de saúde identifica o DECIP sem acessar dados pessoais.
 
@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Servidor somente em `127.0.0.1:8765`.
+- Servidor somente em `127.0.0.1:8766`.
 - Não tocar em `data/decip.db` nem em `output/`.
 - Não encerrar processos automaticamente.
 - Não adicionar dependências nem reinstalar `.venv`.

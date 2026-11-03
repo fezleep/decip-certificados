@@ -2,8 +2,10 @@
 
 ## Inicialização idempotente no Windows
 
+- A porta padrão de inicialização foi alterada de `8765` para `8766`; o servidor
+  e o navegador usam `http://127.0.0.1:8766`.
 - `iniciar.bat` agora diferencia porta livre, instância funcional do DECIP e
-  outro serviço na porta 8765.
+  outro serviço na porta 8766.
 - Uma segunda execução abre a instância existente no navegador e termina com
   sucesso, sem criar outro processo Python.
 - Outro serviço produz diagnóstico com PID, nome, executável e comando quando
@@ -19,15 +21,16 @@
   ocupada por outro serviço, falha de runtime e diagnóstico do listener. O
   sandbox de validação bloqueia conexões de loopback, por isso as fronteiras de
   socket e consulta ao Windows são simuladas nos testes, mantendo a lógica e o
-  BAT executados de verdade. A suíte completa terminou com **29/29 testes
-  aprovados**.
+  BAT executados de verdade. A suíte completa terminou com **30/30 testes
+  aprovados**. Fora da restrição de loopback do sandbox, a aplicação iniciou em
+  `127.0.0.1:8766` e `GET /api/health` respondeu HTTP 200.
 
 ## Confirmação do usuário sobre a falha de cadastro
 
 - O usuário informou em 28/09/2026 que o problema de cadastro que motivou as
   correções foi resolvido em sua aplicação.
 - Essa informação é uma confirmação do usuário, separada das verificações
-  técnicas anteriores feitas por mim: a instância local na porta 8765 foi
+  técnicas anteriores feitas por mim: a instância local na antiga porta 8765 foi
   inspecionada, identificada como processo antigo, reiniciada com o código atual
   e `/api/state` foi conferido para conter `registrations`, `participants` e
   `batch`. Os testes de navegador que realizei usaram banco fictício isolado; não
@@ -184,7 +187,7 @@
 
 ## Funciona
 
-- Aplicativo web local em português, restrito a `127.0.0.1:8765`.
+- Aplicativo web local em português, restrito a `127.0.0.1:8766`.
 - Fluxo em quatro etapas com preenchimento preservado ao navegar.
 - Cadastro e edição manual, seleção de elegibilidade e preservação da grafia.
 - Importação XLSX com sugestão e confirmação de mapeamento.

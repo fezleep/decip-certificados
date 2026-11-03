@@ -165,7 +165,7 @@ def _print_conflict(host: str, port: int, reason: str) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Diagnóstico de inicialização do DECIP Certificados")
     parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--port", type=int, default=8766)
     args = parser.parse_args(argv)
 
     result = inspect_instance(args.host, args.port)

@@ -12,12 +12,12 @@ if not exist ".venv\Scripts\python.exe" (
   exit /b 1
 )
 
-".venv\Scripts\python.exe" -m app.launcher --host 127.0.0.1 --port 8765
+".venv\Scripts\python.exe" -m app.launcher --host 127.0.0.1 --port 8766
 set "DECIP_PROBE_CODE=%ERRORLEVEL%"
 
 if "%DECIP_PROBE_CODE%"=="10" (
   echo [DECIP] Abrindo a instancia existente no navegador...
-  start "DECIP Certificados" http://127.0.0.1:8765
+  start "DECIP Certificados" http://127.0.0.1:8766
   exit /b 0
 )
 
@@ -31,7 +31,7 @@ if "%DECIP_PROBE_CODE%"=="20" (
 )
 
 if not "%DECIP_PROBE_CODE%"=="0" (
-  echo [ERRO] Nao foi possivel verificar a porta 8765 ^(codigo %DECIP_PROBE_CODE%^).
+  echo [ERRO] Nao foi possivel verificar a porta 8766 ^(codigo %DECIP_PROBE_CODE%^).
   echo Nenhum processo foi encerrado. Verifique as mensagens exibidas acima.
   echo.
   echo Pressione uma tecla para continuar...
@@ -39,7 +39,7 @@ if not "%DECIP_PROBE_CODE%"=="0" (
   exit /b %DECIP_PROBE_CODE%
 )
 
-echo [DECIP] Iniciando em http://127.0.0.1:8765 ...
+echo [DECIP] Iniciando em http://127.0.0.1:8766 ...
 ".venv\Scripts\python.exe" run.py
 set "DECIP_EXIT_CODE=%ERRORLEVEL%"
 

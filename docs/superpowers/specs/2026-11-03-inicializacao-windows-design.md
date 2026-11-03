@@ -6,7 +6,7 @@ Tornar a inicialização local do DECIP idempotente e diagnóstica: uma segunda 
 
 ## Metas e restrições
 
-- Manter `127.0.0.1:8765`, Windows e Python 3.12.
+- Manter `127.0.0.1:8766`, Windows e Python 3.12.
 - Preservar integralmente `data/decip.db`, `output/`, geração de PDFs, SMTP e interface.
 - Manter o servidor em primeiro plano para que `Ctrl+C` encerre o processo Python.
 - Nunca encerrar automaticamente o processo que ocupa a porta.
