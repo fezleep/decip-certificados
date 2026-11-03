@@ -19,12 +19,18 @@ certificados em PDF e, quando desejar, enviar cada arquivo por e-mail.
 5. Se o navegador não abrir automaticamente, acesse
    <http://127.0.0.1:8765>.
 
+Se o DECIP já estiver ativo, executar `iniciar.bat` novamente apenas abre a
+instância existente no navegador. Se outro programa estiver usando a porta
+8765, o inicializador informa o PID, o executável e a origem quando o Windows
+permitir a consulta; nenhum processo é encerrado automaticamente.
+
 Os scripts reais usam `py -3.12` para criar o ambiente virtual, instalam os
 pacotes de `requirements.txt` e iniciam `run.py` em `127.0.0.1:8765`. A
 instalação em uma máquina limpa ainda não foi validada; esses passos descrevem o
 que os scripts executam e os pré-requisitos que eles esperam.
 
-Para encerrar, pressione `Ctrl+C` na janela do servidor.
+Para encerrar, pressione `Ctrl+C` na janela do servidor. O Python permanece em
+primeiro plano nessa janela e deve terminar junto com o aplicativo.
 
 ## Uso
 

@@ -13,6 +13,7 @@ from .services.certificate import generate_pdf, safe_filename
 from .services.importer import import_xlsx, inspect_xlsx
 from .services.mailer import SMTPTransport, build_message
 from .validation import clean, valid_email, validate_activity, validate_participant
+from .launcher import SERVICE_ID
 
 
 def create_app(test_config=None):
@@ -37,6 +38,9 @@ def create_app(test_config=None):
 
     @app.get("/")
     def index(): return render_template("index.html")
+
+    @app.get("/api/health")
+    def health(): return jsonify({"service": SERVICE_ID, "status": "ok"})
 
     @app.get("/api/state")
     def state():

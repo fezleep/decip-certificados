@@ -1,4 +1,26 @@
-# Status da implementação — 28/09/2026
+# Status da implementação — 03/11/2026
+
+## Inicialização idempotente no Windows
+
+- `iniciar.bat` agora diferencia porta livre, instância funcional do DECIP e
+  outro serviço na porta 8765.
+- Uma segunda execução abre a instância existente no navegador e termina com
+  sucesso, sem criar outro processo Python.
+- Outro serviço produz diagnóstico com PID, nome, executável e comando quando
+  essas informações estiverem acessíveis. O inicializador nunca encerra o
+  processo automaticamente.
+- A identificação usa `GET /api/health`, que retorna somente nome do serviço e
+  estado; não expõe cadastros, certificados, configurações ou credenciais. Uma
+  instância anterior a essa rota também é reconhecida pelo título estático da
+  página, sem consultar `/api/state`.
+- O servidor continua em primeiro plano para que `Ctrl+C` encerre o processo,
+  sem daemon ou filho Python destacado pelo inicializador.
+- Testes automatizados cobrem inicialização normal, instância duplicada, porta
+  ocupada por outro serviço, falha de runtime e diagnóstico do listener. O
+  sandbox de validação bloqueia conexões de loopback, por isso as fronteiras de
+  socket e consulta ao Windows são simuladas nos testes, mantendo a lógica e o
+  BAT executados de verdade. A suíte completa terminou com **29/29 testes
+  aprovados**.
 
 ## Confirmação do usuário sobre a falha de cadastro
 
